@@ -1,4 +1,4 @@
-#include "ed.h"
+#include "grep.h"
 #include <stdlib.h>
 
 int main(int argc, char *argv[]) {

@@ -80,6 +80,7 @@ void error(char *s) {
     close(io);
     io = -1;
   }
+  exit(1);
 }
 int getchr(void) {
   char c;
@@ -130,24 +131,41 @@ int getfile(void) {
   return (0);
 }
 void init(char *filename) {
-  char *ext, *end, *star, *rs;
+  char *ext, *end, *star, *rs, folder[100], *fp = folder;
   if ((io = open(filename, 0)) < 0) { // is directory or does not exist
     end = strrchr(filename, '/');
-    star = strchr(end + 1, '*');
+    if (end == NULL) {
+      // printf("NULL\n");
+      end = filename;
+      star = strchr(end, '*');
+      *fp++ = '.';
+      *fp++ = '/';
+      *fp = '\0';
+    } else {
+      // printf("NOT NULL\n");
+      *end++ = '\0';
+      star = strchr(end + 1, '*');
+      strcpy(folder, filename);
+      if (strlen(folder) == 1 && *fp == '.') {
+        // printf("len = 1\n");
+        *(fp + 1) = '/';
+        *(fp + 2) = '\0';
+      }
+    }
+    // printf("%s\n", filename);
     if (star == NULL) {
       error("Invalid file.");
     }
-    *end = '\0';
-    *star = '\0';
-    // printf("%s\n", filename); // Folder
-    // printf("%s\n", end + 1);  // left of *
-    // printf("%s\n", star + 1); // right of *
-    d = opendir(filename);
+    *star++ = '\0';
+    // printf("%s\n", filename); // file name
+    // printf("%s\n", folder);   // Folder
+    // printf("%s\n", end);      // left of *
+    // printf("%s\n", star);     // right of *
+    d = opendir(folder);
     if (d) {
       while ((dir = readdir(d)) != NULL) {
-        // ext = get_ext(dir->d_name);
-        if (begins_with(dir->d_name, end + 1) &&
-            ends_with(dir->d_name, star + 1)) {
+        // printf("%s\n", dir->d_name);
+        if (begins_with(dir->d_name, end) && ends_with(dir->d_name, star)) {
           replace_(currfile, dir->d_name);
           open_file(currfile);
           search();

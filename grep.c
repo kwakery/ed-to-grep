@@ -1,5 +1,4 @@
 #include "grep.h"
-#include <stdlib.h>
 
 int main(int argc, char *argv[]) {
   char *p1, *p2;
@@ -8,8 +7,9 @@ int main(int argc, char *argv[]) {
     // printf("Arg 1: %s, Arg 2: %s\n", *argv, *(argv + 1));
     compile(*argv++); // Compile the expression buffer
     // printf("%s\n", expbuf);
+    // puts(*argv);
     init(*argv); // Open file
-    search();    // Search for results
+    // search();    // Search for results
   } else {
     puts("Please run the program again with 2 args.\n(1)Regular "
          "Expression\n(2)File name\n");
@@ -17,22 +17,57 @@ int main(int argc, char *argv[]) {
   exit(0);
   return 0;
 }
+int begins_with(const char *s1, const char *s2) {
+  while (*s1 == *s2 && *s1 != '\0' && *s2 != '\0') {
+    ++s1;
+    ++s2;
+  }
+  if (*s2 == '\0')
+    return 1; // match
+  return 0;
+}
+int ends_with(const char *s1, const char *s2) {
+  char *r = (char *)s2;
+  while (*s1 != *s2 && *s1 != '\0') {
+    ++s1;
+  }
+  while (*s1 == *r && *r != '\0' && *s1 != '\0') {
+    ++s1;
+    ++r;
+  }
+  if (*s1 == '\0' && *r == '\0')
+    return 1;
+  if (*s1 == '\0')
+    return 0;
+  return ends_with(s1, s2);
+}
+void replace_(char *s1, const char *s2) {
+  while (*s2 != '\0') {
+    *s1++ = *s2++;
+  }
+  *s1++ = '\0';
+}
 /* A somewhat simplified global().
  *Uses execute() to get what we need.
  */
 void search() {
   char *gp = genbuf, *lp = linebuf;
-  int success;
   while (*gp != '\0') { // eof
     if (*gp == '\n') {
       *lp++ = '\0';
-      success = execute();
 
-      if (success) {
+      if (execute()) {
+        if (*currfile != '\0') {
+          putchr('[');
+          puts(currfile);
+          putchr(']');
+        } else
+          puts(currfile);
+
         puts(linebuf);
+        putchr('\n');
       }
-      // need to reset lp...
-      lp = linebuf;
+      lp = linebuf; // need to reset lp...
       ++gp;
     } else {
       *lp++ = *gp++;
@@ -77,7 +112,6 @@ int getfile(void) {
           break;
         }
       }
-      // *fp++ = EOF; // TODO: We add a EOF to signal end of file.
       fp = genbuf;
     }
     c = *fp++;
@@ -96,6 +130,38 @@ int getfile(void) {
   return (0);
 }
 void init(char *filename) {
+  char *ext, *end, *star, *rs;
+  if ((io = open(filename, 0)) < 0) { // is directory or does not exist
+    end = strrchr(filename, '/');
+    star = strchr(end + 1, '*');
+    if (star == NULL) {
+      error("Invalid file.");
+    }
+    *end = '\0';
+    *star = '\0';
+    // printf("%s\n", filename); // Folder
+    // printf("%s\n", end + 1);  // left of *
+    // printf("%s\n", star + 1); // right of *
+    d = opendir(filename);
+    if (d) {
+      while ((dir = readdir(d)) != NULL) {
+        // ext = get_ext(dir->d_name);
+        if (begins_with(dir->d_name, end + 1) &&
+            ends_with(dir->d_name, star + 1)) {
+          replace_(currfile, dir->d_name);
+          open_file(currfile);
+          search();
+        }
+      }
+      closedir(d);
+    }
+  } else {
+    close(io);
+    open_file(filename);
+    search();
+  }
+}
+void open_file(char *filename) {
   if ((io = open(filename, 0)) < 0) {
     error(filename);
   }
@@ -104,6 +170,15 @@ void init(char *filename) {
   io = -1;
   // printf("----[%s contents]----\n%s\n", filename, genbuf);
   // printf("----[Current line]----\n%s\n\n", linebuf);
+}
+void cerror() {
+  *expbuf = 0;
+  nbra = 0;
+  error(Q);
+}
+void defchar(char **ep, int *c) {
+  **ep++ = CCHR;
+  **ep++ = *c;
 }
 /*  Compiles the expression buffer
     What was changed:
@@ -125,12 +200,12 @@ void compile(char *s) {
   lastep = 0;
   for (;;) {
     if (ep >= &expbuf[ESIZE]) {
-      goto cerror;
+      cerror();
     }
     c = *sp++;
     if (c == '\0') {
       if (bracketp != bracket) { // Error if bracket didn't end
-        goto cerror;
+        cerror();
       }
 
       *ep++ = CEOF;
@@ -141,7 +216,7 @@ void compile(char *s) {
     case '\\':
       if ((c = *sp++) == '(') {
         if (nbra >= NBRA) {
-          goto cerror;
+          cerror();
         }
         *bracketp++ = nbra;
         *ep++ = CBRA;
@@ -150,7 +225,7 @@ void compile(char *s) {
       }
       if (c == ')') {
         if (bracketp <= bracket) {
-          goto cerror;
+          cerror();
         }
         *ep++ = CKET;
         *ep++ = *--bracketp;
@@ -163,7 +238,7 @@ void compile(char *s) {
       }
       *ep++ = CCHR;
       if (c == '\n') {
-        goto cerror;
+        cerror();
       }
       *ep++ = c;
       continue;
@@ -171,16 +246,16 @@ void compile(char *s) {
       *ep++ = CDOT;
       continue;
     case '\n':
-      goto cerror;
+      cerror();
     case '*':
       if (lastep == 0 || *lastep == CBRA || *lastep == CKET) {
-        goto defchar;
+        defchar(&ep, &c);
       }
       *lastep |= STAR;
       continue;
     case '$':
       if ((peekc = *sp++) != '\0') {
-        goto defchar;
+        defchar(&ep, &c);
       }
       --sp; // TODO: might cause a problem - We're going backwards after peeking
       *ep++ = CDOL;
@@ -195,7 +270,7 @@ void compile(char *s) {
       }
       do {
         if (c == '\n') {
-          goto cerror;
+          cerror();
         }
         if (c == '-' && ep[-1] != 0) {
           if ((c = *sp++) == ']') {
@@ -208,28 +283,22 @@ void compile(char *s) {
             ep++;
             cclcnt++;
             if (ep >= &expbuf[ESIZE]) {
-              goto cerror;
+              cerror();
             }
           }
         }
         *ep++ = c;
         cclcnt++;
         if (ep >= &expbuf[ESIZE]) {
-          goto cerror;
+          cerror();
         }
       } while ((c = *sp++) != ']');
       lastep[1] = cclcnt;
       continue;
-    defchar:
     default:
-      *ep++ = CCHR;
-      *ep++ = c;
+      defchar(&ep, &c);
     }
   }
-cerror:
-  expbuf[0] = 0;
-  nbra = 0;
-  error(Q);
 }
 /* Parses the compiled expression buffer */
 int execute() {
@@ -264,6 +333,16 @@ int execute() {
       return (1);
     }
   } while (*p1++);
+  return (0);
+}
+int star(char *lp, char *ep, char *curlp) {
+  // don't need double star since we return... I think
+  do {
+    lp--;
+    if (advance(lp, ep)) {
+      return (1);
+    }
+  } while (lp > curlp);
   return (0);
 }
 int advance(char *lp, char *ep) {
@@ -335,28 +414,20 @@ int advance(char *lp, char *ep) {
       curlp = lp;
       while (*lp++) {
       }
-      goto star;
+      return star(lp, ep, curlp);
     case CCHR | STAR:
       curlp = lp;
       while (*lp++ == *ep) {
       }
       ++ep;
-      goto star;
+      return star(lp, ep, curlp);
     case CCL | STAR:
     case NCCL | STAR:
       curlp = lp;
       while (cclass(ep, *lp++, ep[-1] == (CCL | STAR))) {
       }
       ep += *ep;
-      goto star;
-    star:
-      do {
-        lp--;
-        if (advance(lp, ep)) {
-          return (1);
-        }
-      } while (lp > curlp);
-      return (0);
+      return star(lp, ep, curlp);
     default:
       error(Q);
     }
@@ -389,7 +460,7 @@ void puts(char *sp) {
   col = 0;
   while (*sp)
     putchr(*sp++);
-  putchr('\n');
+  // putchr('\n');
 }
 void putchr(int ac) {
   char *lp;

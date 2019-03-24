@@ -1,3 +1,7 @@
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define LBSIZE 4096 // line buffer size
 #define ESIZE 256   // expression buffer size
 #define NBRA 5      // bracket size (?)
@@ -45,6 +49,9 @@ char *braelist[NBRA];
 int nbra;
 char line[70];
 char *linp = line;
+char currfile[1000];
+DIR *d;
+struct dirent *dir;
 
 char *getline(unsigned int tl);
 int advance(char *lp, char *ep);
@@ -58,7 +65,12 @@ void filename(int comm);
 int getchr(void);
 int getfile(void);
 void init(char *);
+void open_file(char *);
 void putchr(int ac);
 int putline(void);
 void puts(char *sp);
 void search();
+char *strrchr_(const char, char);
+char *strchr_(const char, char);
+void replace_(char *, const char *);
+char *get_ext(const char *);

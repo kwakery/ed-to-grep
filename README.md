@@ -17,7 +17,8 @@ clang grep.c -o grep
 
 ```bash
 clang grep.c -o grep
-./grep [a-z] ./home/matt/all_*.csv # The filename has to begin with "all_" and end with ".csv"
+./grep [^a-z] "./*.txt"
+./grep [a-z] "./home/matt/all_*.csv" # The filename has to begin with "all_" and end with ".csv"
 ```
 
 ## License

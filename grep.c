@@ -144,7 +144,7 @@ void init(char *filename) {
     } else {
       // printf("NOT NULL\n");
       *end++ = '\0';
-      star = strchr(end + 1, '*');
+      star = strchr(end, '*');
       strcpy(folder, filename);
       if (strlen(folder) == 1 && *fp == '.') {
         // printf("len = 1\n");
@@ -154,6 +154,7 @@ void init(char *filename) {
     }
     // printf("%s\n", filename);
     if (star == NULL) {
+      // printf("No star\n");
       error("Invalid file.");
     }
     *star++ = '\0';
@@ -314,7 +315,8 @@ void compile(char *s) {
       lastep[1] = cclcnt;
       continue;
     default:
-      defchar(&ep, &c);
+      *ep++ = CCHR;
+      *ep++ = c;
     }
   }
 }

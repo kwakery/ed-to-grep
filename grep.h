@@ -21,38 +21,6 @@
 
 #define STAR 01
 
-char Q[] = "";
-char T[] = "TMP";
-
-int peekc;              // next char
-int lastc;              // last char
-char linebuf[LBSIZE];   // line buffer
-char expbuf[ESIZE + 4]; // parsed expression buffer
-char genbuf[LBSIZE];    // general buffer
-long count;             // line count
-char *nextip;
-int ninbuf;
-int io; // file opened?
-int open(char *, int);
-int read(int, char *, int);
-int write(int, char *, int);
-int close(int);
-
-int oflag;
-int col;
-char *globp;
-char *tfname;
-char *loc1;
-char *loc2;
-char *braslist[NBRA];
-char *braelist[NBRA];
-int nbra;
-char line[70];
-char *linp = line;
-char currfile[1000];
-DIR *d;
-struct dirent *dir;
-
 char *getline(unsigned int tl);
 int advance(char *lp, char *ep);
 int backref(int i, char *lp);
@@ -74,3 +42,8 @@ char *strrchr_(const char, char);
 char *strchr_(const char, char);
 void replace_(char *, const char *);
 char *get_ext(const char *);
+
+int open(char *, int);
+int read(int, char *, int);
+int write(int, char *, int);
+int close(int);

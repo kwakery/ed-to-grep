@@ -1,7 +1,7 @@
 #include "grep.h"
 
 char linebuf[LBSIZE], expbuf[ESIZE + 4], genbuf[LBSIZE];   // buffers
-char Q[] = "", T[] = "TMP"
+char Q[] = "", T[] = "TMP";
 long count;             // line count
 int peekc, lastc, ninbuf, io, oflag, col, nbra;
 char *nextip, *globp, *tfname, *loc1, *loc2, *braslist[NBRA], *braelist[NBRA], line[70], *linp = line, currfile[1000];
